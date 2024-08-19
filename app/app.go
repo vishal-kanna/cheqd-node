@@ -176,21 +176,21 @@ var (
 		resource.AppModuleBasic{},
 		ibcfee.AppModuleBasic{},
 		consensus.AppModuleBasic{},
+		feemarketmodule.AppModuleBasic{},
 	)
 
 	// module account permissions
 	maccPerms = map[string][]string{
-		authtypes.FeeCollectorName:      nil,
-		distrtypes.ModuleName:           nil,
-		icatypes.ModuleName:             nil,
-		minttypes.ModuleName:            {authtypes.Minter},
-		stakingtypes.BondedPoolName:     {authtypes.Burner, authtypes.Staking},
-		stakingtypes.NotBondedPoolName:  {authtypes.Burner, authtypes.Staking},
-		govtypes.ModuleName:             {authtypes.Burner},
-		ibctransfertypes.ModuleName:     {authtypes.Minter, authtypes.Burner},
-		didtypes.ModuleName:             {authtypes.Burner},
-		feemarkettypes.ModuleName:       {authtypes.Burner},
-		feemarkettypes.FeeCollectorName: {authtypes.Burner},
+		authtypes.FeeCollectorName:     nil,
+		distrtypes.ModuleName:          nil,
+		icatypes.ModuleName:            nil,
+		minttypes.ModuleName:           {authtypes.Minter},
+		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
+		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
+		govtypes.ModuleName:            {authtypes.Burner},
+		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+		didtypes.ModuleName:            {authtypes.Burner},
+		feemarkettypes.ModuleName:      {authtypes.Burner},
 	}
 )
 
@@ -235,6 +235,7 @@ type App struct {
 	EvidenceKeeper        evidencekeeper.Keeper
 	TransferKeeper        ibctransferkeeper.Keeper
 	FeeGrantKeeper        feegrantkeeper.Keeper
+	FeeMarketKeeper       *feemarketkeeper.Keeper
 	AuthzKeeper           authzkeeper.Keeper
 	GroupKeeper           groupkeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
@@ -255,8 +256,7 @@ type App struct {
 
 	configurator module.Configurator
 
-	sm              *module.SimulationManager
-	FeeMarketKeeper *feemarketkeeper.Keeper
+	sm *module.SimulationManager
 }
 
 func init() {
@@ -502,8 +502,9 @@ func New(
 	)
 
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(appCodec, keys[feemarkettypes.StoreKey], app.AccountKeeper, &feemarkettypes.TestDenomResolver{}, authtypes.NewModuleAddress(govtypes.ModuleName).String())
-
 	app.FeeMarketKeeper.SetDenomResolver(&feemarkettypes.TestDenomResolver{})
+
+	fmt.Println("FeeMarketKeeper>>>>>>>>>>>>..", app.FeeMarketKeeper)
 	// IBC Fee Module keeper
 	app.IBCFeeKeeper = ibcfeekeeper.NewKeeper(
 		appCodec,
@@ -685,6 +686,7 @@ func New(
 		didtypes.ModuleName,
 		resourcetypes.ModuleName,
 		consensusparamtypes.ModuleName,
+		feemarkettypes.ModuleName,
 	)
 
 	app.ModuleManager.SetOrderEndBlockers(
@@ -712,6 +714,7 @@ func New(
 		icatypes.ModuleName,
 		ibcfeetypes.ModuleName,
 		consensusparamtypes.ModuleName,
+		feemarkettypes.ModuleName,
 	)
 
 	// NOTE: The genutils module must occur after staking so that pools are
@@ -744,6 +747,7 @@ func New(
 		upgradetypes.ModuleName,
 		paramstypes.ModuleName,
 		consensusparamtypes.ModuleName,
+		feemarkettypes.ModuleName,
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisModuleOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisModuleOrder...)
@@ -779,6 +783,7 @@ func New(
 		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 		SigGasConsumer:  authante.DefaultSigVerificationGasConsumer,
 		IBCKeeper:       app.IBCKeeper,
+		FeeMarketKeeper: app.FeeMarketKeeper,
 	})
 	if err != nil {
 		tmos.Exit(err.Error())
@@ -795,11 +800,12 @@ func New(
 	app.sm.RegisterStoreDecoders()
 
 	postHandler, err := posthandler.NewPostHandler(posthandler.HandlerOptions{
-		AccountKeeper:  app.AccountKeeper,
-		BankKeeper:     app.BankKeeper,
-		FeegrantKeeper: app.FeeGrantKeeper,
-		DidKeeper:      app.DidKeeper,
-		ResourceKeeper: app.ResourceKeeper,
+		AccountKeeper:   app.AccountKeeper,
+		BankKeeper:      app.BankKeeper,
+		FeegrantKeeper:  app.FeeGrantKeeper,
+		DidKeeper:       app.DidKeeper,
+		ResourceKeeper:  app.ResourceKeeper,
+		FeeMarketKeeoer: app.FeeMarketKeeper,
 	})
 	if err != nil {
 		tmos.Exit(err.Error())

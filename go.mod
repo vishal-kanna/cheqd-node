@@ -215,8 +215,11 @@ replace (
 	// replace cosmos-sdk v0.47.10
 	github.com/cosmos/cosmos-sdk => github.com/cheqd/cosmos-sdk v0.47.10-height-mismatch
 
+	github.com/cosmos/gogoproto v1.5.0 => github.com/cosmos/gogoproto v1.4.10
+
 	// replace iavl v0.20.1
 	github.com/cosmos/iavl => github.com/cheqd/iavl v0.20.1-uneven-heights
+	github.com/cosmos/ledger-cosmos-go v0.13.3 => github.com/cosmos/ledger-cosmos-go v0.12.4
 
 	// dgrijalva/jwt-go is deprecated and doesn't receive security updates.
 	// TODO: remove it: https://github.com/cosmos/cosmos-sdk/issues/13134
@@ -234,4 +237,5 @@ replace (
 
 	// stick with compatible version of rapid in v0.47.x line
 	pgregory.net/rapid => pgregory.net/rapid v0.5.5
+
 )
