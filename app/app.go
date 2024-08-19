@@ -129,6 +129,10 @@ import (
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 
+	feemarketmodule "github.com/skip-mev/feemarket/x/feemarket"
+	feemarketkeeper "github.com/skip-mev/feemarket/x/feemarket/keeper"
+	feemarkettypes "github.com/skip-mev/feemarket/x/feemarket/types"
+
 	// unnamed import of statik for swagger UI support
 	_ "github.com/cheqd/cheqd-node/app/client/docs/statik"
 )
@@ -176,15 +180,17 @@ var (
 
 	// module account permissions
 	maccPerms = map[string][]string{
-		authtypes.FeeCollectorName:     nil,
-		distrtypes.ModuleName:          nil,
-		icatypes.ModuleName:            nil,
-		minttypes.ModuleName:           {authtypes.Minter},
-		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
-		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
-		govtypes.ModuleName:            {authtypes.Burner},
-		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
-		didtypes.ModuleName:            {authtypes.Burner},
+		authtypes.FeeCollectorName:      nil,
+		distrtypes.ModuleName:           nil,
+		icatypes.ModuleName:             nil,
+		minttypes.ModuleName:            {authtypes.Minter},
+		stakingtypes.BondedPoolName:     {authtypes.Burner, authtypes.Staking},
+		stakingtypes.NotBondedPoolName:  {authtypes.Burner, authtypes.Staking},
+		govtypes.ModuleName:             {authtypes.Burner},
+		ibctransfertypes.ModuleName:     {authtypes.Minter, authtypes.Burner},
+		didtypes.ModuleName:             {authtypes.Burner},
+		feemarkettypes.ModuleName:       {authtypes.Burner},
+		feemarkettypes.FeeCollectorName: {authtypes.Burner},
 	}
 )
 
@@ -249,7 +255,8 @@ type App struct {
 
 	configurator module.Configurator
 
-	sm *module.SimulationManager
+	sm              *module.SimulationManager
+	FeeMarketKeeper *feemarketkeeper.Keeper
 }
 
 func init() {
@@ -310,6 +317,7 @@ func New(
 		ibcfeetypes.StoreKey,
 		didtypes.StoreKey,
 		resourcetypes.StoreKey,
+		feemarkettypes.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -493,6 +501,9 @@ func New(
 		),
 	)
 
+	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(appCodec, keys[feemarkettypes.StoreKey], app.AccountKeeper, &feemarkettypes.TestDenomResolver{}, authtypes.NewModuleAddress(govtypes.ModuleName).String())
+
+	app.FeeMarketKeeper.SetDenomResolver(&feemarkettypes.TestDenomResolver{})
 	// IBC Fee Module keeper
 	app.IBCFeeKeeper = ibcfeekeeper.NewKeeper(
 		appCodec,
@@ -641,6 +652,7 @@ func New(
 		// cheqd modules
 		did.NewAppModule(appCodec, app.DidKeeper),
 		resource.NewAppModule(appCodec, app.ResourceKeeper, app.DidKeeper),
+		feemarketmodule.NewAppModule(appCodec, *app.FeeMarketKeeper),
 	)
 
 	// During begin block slashing happens after distr.BeginBlocker so that
